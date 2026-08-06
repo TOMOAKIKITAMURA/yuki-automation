@@ -79,7 +79,8 @@ def main():
     with open(caption_file, "w", encoding="utf-8") as f:
         f.write(caption)
 
-subprocess.run(        [
+    subprocess.run(
+        [
             "python3", "-u", "post_to_instagram.py",
             "--caption-file", caption_file,
             "--image-url", image_url,
