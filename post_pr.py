@@ -22,6 +22,7 @@ import sys
 import glob
 import argparse
 import subprocess
+from urllib.parse import quote
 
 # GITHUB_REPOSITORYはGitHub Actions実行時に自動で設定される環境変数（例: "owner/repo"）
 GITHUB_REPOSITORY = os.environ.get("GITHUB_REPOSITORY", "TOMOAKIKITAMURA/yuki-automation")
@@ -57,8 +58,9 @@ def main():
 
     # --- Instagram: raw.githubusercontent.com経由の公開URLを使う ---
     # (このリポジトリは公開設定にしているので、コミット済みのファイルはそのままURLでアクセスできる)
+    # ファイル名に日本語やスペースが含まれていても正しいURLになるよう、quote()でエンコードする
     image_urls = [
-        f"https://raw.githubusercontent.com/{GITHUB_REPOSITORY}/main/{img}"
+        f"https://raw.githubusercontent.com/{GITHUB_REPOSITORY}/main/" + quote(img)
         for img in images
     ]
     print("=== Instagramに投稿します ===")
