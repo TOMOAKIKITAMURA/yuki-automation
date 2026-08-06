@@ -68,8 +68,8 @@ def main():
         print(f"公開URL: {image_url}")
 
     caption_result = subprocess.run(
-        ["python3", "generate_ig_caption.py"],
-        capture_output=True, text=True, check=True,
+        ["python3", "-u", "generate_ig_caption.py"],
+        capture_output=True, text=True, check=True, timeout=90,
     )
     caption = caption_result.stdout.strip()
     print("--- 生成されたキャプション ---")
@@ -79,13 +79,12 @@ def main():
     with open(caption_file, "w", encoding="utf-8") as f:
         f.write(caption)
 
-    subprocess.run(
-        [
-            "python3", "post_to_instagram.py",
+subprocess.run(        [
+            "python3", "-u", "post_to_instagram.py",
             "--caption-file", caption_file,
             "--image-url", image_url,
         ],
-        check=True,
+        check=True, timeout=180,
     )
 
     state["last_index"] = index
