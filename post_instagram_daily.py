@@ -8,7 +8,7 @@ photos/ フォルダの写真を順番に1枚選び、アスペクト比を自�
 （フォルダの最後まで行ったら最初に戻る）。
 
 必要な環境変数:
-  ANTHROPIC_API_KEY, IG_ACCESS_TOKEN, IG_USER_ID
+  ANTHROPIC_API_KEY, IG_ACCESS_TOKEN, IG_USER_ID, IMGBB_API_KEY
 
 事前準備:
   photos/ フォルダに投稿したい画像(.jpg, .jpeg, .png)を入れておくこと
@@ -20,7 +20,7 @@ import json
 import subprocess
 import tempfile
 
-from image_utils import fix_aspect_ratio, upload_to_catbox
+from image_utils import fix_aspect_ratio, upload_to_imgbb
 
 PHOTOS_DIR = "photos"
 STATE_FILE = "instagram_state.json"
@@ -56,10 +56,15 @@ def main():
     photo_path = os.path.join(PHOTOS_DIR, photos[index])
     print(f"選択された写真: {photo_path} ({index + 1}/{len(photos)})")
 
+    imgbb_api_key = os.environ.get("IMGBB_API_KEY")
+    if not imgbb_api_key:
+        print("環境変数 IMGBB_API_KEY が設定されていません", file=sys.stderr)
+        sys.exit(1)
+
     with tempfile.TemporaryDirectory() as tmp:
         fixed_path = os.path.join(tmp, "fixed.jpg")
         fix_aspect_ratio(photo_path, fixed_path)
-        image_url = upload_to_catbox(fixed_path)
+        image_url = upload_to_imgbb(fixed_path, imgbb_api_key)
         print(f"公開URL: {image_url}")
 
     caption_result = subprocess.run(
