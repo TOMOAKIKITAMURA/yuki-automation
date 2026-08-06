@@ -1,0 +1,42 @@
+name: YU KI 自動投稿
+
+on:
+  schedule:
+    # UTC基準。0時=日本時間9時（朝/考察系）、12時=日本時間21時（夜/ライフスタイル系）
+    - cron: "0 0,12 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 依存関係インストール
+        run: pip install -r requirements.txt
+
+      - name: モードを判定してツイートを生成・投稿
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+        run: |
+          HOUR=$(date -u +%H)
+          if [ "$HOUR" = "00" ]; then
+            MODE=morning
+          else
+            MODE=evening
+          fi
+          echo "実行モード: $MODE (UTC ${HOUR}時)"
+
+          python3 generate_tweet.py --mode "$MODE" > tweet.txt
+          echo "--- 生成されたツイート ---"
+          cat tweet.txt
+
+          python3 post_to_x.py --text-file tweet.txt
