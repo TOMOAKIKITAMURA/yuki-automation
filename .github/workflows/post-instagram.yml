@@ -28,7 +28,7 @@ jobs:
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
           IMGBB_API_KEY: ${{ secrets.IMGBB_API_KEY }}
-        run: python3 post_instagram_daily.py
+        run: python3 -u post_instagram_daily.py
 
       - name: 投稿状態をリポジトリに保存
         run: |
