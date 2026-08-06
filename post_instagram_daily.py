@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
 """
 post_instagram_daily.py
-photos/ フォルダの写真を順番に1枚選び、アスペクト比を自動補正してアップロードし、
-キャプションを生成してInstagramへ自動投稿する。
+photos/ フォルダの写真を順番に1枚選び、アスペクト比を自動補正して
+このリポジトリ自体を使って公開URLを作り、キャプションを生成してInstagramへ自動投稿する。
+
+画像の公開方法について:
+  以前はimgbb.com等の外部画像ホスティングサービスを使っていたが、
+  Instagram側のサーバーがそれらのURLから画像を取得できず投稿に失敗するケースがあったため、
+  このGitHubリポジトリ自体(raw.githubusercontent.com)を画像の公開先として使うように変更した。
+  毎回ユニークなファイル名で public/ フォルダにコミット・pushし、そのURLをInstagramに渡す。
 
 投稿済みの位置は instagram_state.json に記録し、次回はその続きから投稿する
 （フォルダの最後まで行ったら最初に戻る）。
 
 必要な環境変数:
-  ANTHROPIC_API_KEY, IG_ACCESS_TOKEN, IG_USER_ID, IMGBB_API_KEY
+  ANTHROPIC_API_KEY, IG_ACCESS_TOKEN, IG_USER_ID
 
 事前準備:
   photos/ フォルダに投稿したい画像(.jpg, .jpeg, .png)を入れておくこと
@@ -17,13 +23,18 @@ photos/ フォルダの写真を順番に1枚選び、アスペクト比を自�
 import os
 import sys
 import json
+import time
+import glob
 import subprocess
-import tempfile
 
-from image_utils import fix_aspect_ratio, upload_to_imgbb
+from image_utils import fix_aspect_ratio
 
 PHOTOS_DIR = "photos"
+PUBLIC_DIR = "public"
 STATE_FILE = "instagram_state.json"
+
+# GITHUB_REPOSITORYはGitHub Actions実行時に自動で設定される環境変数（例: "owner/repo"）
+GITHUB_REPOSITORY = os.environ.get("GITHUB_REPOSITORY", "TOMOAKIKITAMURA/yuki-automation")
 
 
 def load_state():
@@ -36,6 +47,34 @@ def load_state():
 def save_state(state):
     with open(STATE_FILE, "w", encoding="utf-8") as f:
         json.dump(state, f, ensure_ascii=False, indent=2)
+
+
+def publish_image_to_repo(fixed_path):
+    """加工済み画像をリポジトリのpublic/フォルダにユニークなファイル名でコミット・pushし、
+    raw.githubusercontent.com経由の公開URLを返す。"""
+    os.makedirs(PUBLIC_DIR, exist_ok=True)
+
+    # 古い画像を削除してリポジトリが肥大化しないようにする
+    for old in glob.glob(os.path.join(PUBLIC_DIR, "*.jpg")):
+        os.remove(old)
+
+    filename = f"ig_{int(time.time())}.jpg"
+    dest_path = os.path.join(PUBLIC_DIR, filename)
+    with open(fixed_path, "rb") as src, open(dest_path, "wb") as dst:
+        dst.write(src.read())
+
+    subprocess.run(["git", "config", "user.name", "github-actions[bot]"], check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "github-actions[bot]@users.noreply.github.com"],
+        check=True,
+    )
+    subprocess.run(["git", "add", "-A", PUBLIC_DIR], check=True)
+    subprocess.run(["git", "commit", "-m", f"Publish {filename} for Instagram"], check=True)
+    subprocess.run(["git", "push"], check=True)
+
+    url = f"https://raw.githubusercontent.com/{GITHUB_REPOSITORY}/main/{PUBLIC_DIR}/{filename}"
+    print(f"公開URL: {url}")
+    return url
 
 
 def main():
@@ -56,16 +95,12 @@ def main():
     photo_path = os.path.join(PHOTOS_DIR, photos[index])
     print(f"選択された写真: {photo_path} ({index + 1}/{len(photos)})")
 
-    imgbb_api_key = os.environ.get("IMGBB_API_KEY")
-    if not imgbb_api_key:
-        print("環境変数 IMGBB_API_KEY が設定されていません", file=sys.stderr)
-        sys.exit(1)
+    fixed_path = "/tmp/ig_fixed.jpg"
+    fix_aspect_ratio(photo_path, fixed_path)
+    image_url = publish_image_to_repo(fixed_path)
 
-    with tempfile.TemporaryDirectory() as tmp:
-        fixed_path = os.path.join(tmp, "fixed.jpg")
-        fix_aspect_ratio(photo_path, fixed_path)
-        image_url = upload_to_imgbb(fixed_path, imgbb_api_key)
-        print(f"公開URL: {image_url}")
+    # pushしたファイルがInstagram側からすぐ取得できるよう少し待つ
+    time.sleep(10)
 
     caption_result = subprocess.run(
         ["python3", "-u", "generate_ig_caption.py"],
