@@ -22,8 +22,10 @@ jobs:
       - name: 依存関係インストール
         run: pip install -r requirements.txt
 
-- name: 【診断】Instagram APIへの疎通確認
+      - name: 【診断】Instagram APIへの疎通確認
         run: curl -v --max-time 15 "https://graph.instagram.com/v24.0/me?access_token=test" || echo "接続できませんでした(exit code $?)"
+
+      - name: 写真を選んでキャプション生成・投稿
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
