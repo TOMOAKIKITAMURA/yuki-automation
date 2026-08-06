@@ -1,183 +1,100 @@
 #!/usr/bin/env python3
 """
-post_to_instagram.py
-yukiさんのInstagramアカウントへの自動投稿スクリプト（Instagram API with Instagram Login）
+post_instagram_daily.py
+photos/ フォルダの写真を順番に1枚選び、アスペクト比を自動補正してアップロードし、
+キャプションを生成してInstagramへ自動投稿する。
 
-事前準備:
-  pip install requests
+投稿済みの位置は instagram_state.json に記録し、次回はその続きから投稿する
+（フォルダの最後まで行ったら最初に戻る）。
 
 必要な環境変数:
-  IG_ACCESS_TOKEN   長期アクセストークン（60日間有効。exchange_token.pyで取得）
-  IG_USER_ID        投稿先InstagramアカウントのユーザーID（数値）
+  ANTHROPIC_API_KEY, IG_ACCESS_TOKEN, IG_USER_ID, IMGBB_API_KEY
 
-重要な制約:
-  - 画像/動画はインターネット上の「公開URL」である必要があります（Instagram側がそのURLを
-    取得しにいくため）。ローカルファイルを直接アップロードすることはできません。
-  - 画像はJPEGのみサポート
-  - 画像/動画の縦横比は 4:5（縦長の最大）〜 1.91:1（横長の最大）の範囲である必要があります。
-    範囲外だと "The aspect ratio is not supported" エラーになります。
-  - 投稿上限は24時間で100件（カルーセルは1件扱い）
-
-使い方:
-  # 画像1枚
-  python3 post_to_instagram.py --caption "本日のコーデ" --image-url "https://example.com/photo.jpg"
-
-  # 動画（リール）
-  python3 post_to_instagram.py --caption "今日のvlog" --video-url "https://example.com/video.mp4" --reels
-
-  # カルーセル（画像/動画を複数、最大10件）
-  python3 post_to_instagram.py --caption "本日の3枚" --image-url "https://example.com/1.jpg" "https://example.com/2.jpg" "https://example.com/3.jpg"
-
-  # キャプションをファイルから読み込み
-  python3 post_to_instagram.py --caption-file caption.txt --image-url "https://example.com/photo.jpg"
+事前準備:
+  photos/ フォルダに投稿したい画像(.jpg, .jpeg, .png)を入れておくこと
 """
 
 import os
 import sys
-import time
-import argparse
-import logging
+import json
+import subprocess
+import tempfile
 
-import requests
+from image_utils import fix_aspect_ratio, upload_to_imgbb
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-)
-log = logging.getLogger("post_to_instagram")
-
-API_VERSION = "v24.0"
-HOST = "https://graph.instagram.com"
-
-REQUIRED_ENV_VARS = ["IG_ACCESS_TOKEN", "IG_USER_ID"]
+PHOTOS_DIR = "photos"
+STATE_FILE = "instagram_state.json"
 
 
-def load_credentials():
-    missing = [v for v in REQUIRED_ENV_VARS if not os.environ.get(v)]
-    if missing:
-        log.error("環境変数が不足しています: %s", ", ".join(missing))
-        sys.exit(1)
-    return os.environ["IG_ACCESS_TOKEN"], os.environ["IG_USER_ID"]
+def load_state():
+    if os.path.exists(STATE_FILE):
+        with open(STATE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {"last_index": -1}
 
 
-def create_container(access_token, ig_user_id, caption=None, image_url=None, video_url=None,
-                      media_type=None, is_carousel_item=False):
-    url = f"{HOST}/{API_VERSION}/{ig_user_id}/media"
-    payload = {"access_token": access_token}
-    if caption:
-        payload["caption"] = caption
-    if image_url:
-        payload["image_url"] = image_url
-    if video_url:
-        payload["video_url"] = video_url
-    if media_type:
-        payload["media_type"] = media_type
-    if is_carousel_item:
-        payload["is_carousel_item"] = "true"
-
-    resp = requests.post(url, data=payload, timeout=60)
-    data = resp.json()
-    if resp.status_code != 200:
-        log.error("コンテナ作成に失敗しました: %s", data)
-        sys.exit(1)
-    log.info("コンテナ作成: %s", data["id"])
-    return data["id"]
-
-
-def create_carousel_container(access_token, ig_user_id, caption, child_ids):
-    url = f"{HOST}/{API_VERSION}/{ig_user_id}/media"
-    payload = {
-        "access_token": access_token,
-        "media_type": "CAROUSEL",
-        "children": ",".join(child_ids),
-    }
-    if caption:
-        payload["caption"] = caption
-    resp = requests.post(url, data=payload, timeout=60)
-    data = resp.json()
-    if resp.status_code != 200:
-        log.error("カルーセルコンテナ作成に失敗しました: %s", data)
-        sys.exit(1)
-    log.info("カルーセルコンテナ作成: %s", data["id"])
-    return data["id"]
-
-
-def wait_until_ready(access_token, container_id, timeout_sec=300, interval_sec=10):
-    """コンテナがFINISHEDになるまで待つ（動画は時間がかかるが、画像でも数秒かかることがある）"""
-    url = f"{HOST}/{API_VERSION}/{container_id}"
-    elapsed = 0
-    while elapsed < timeout_sec:
-        resp = requests.get(url, params={"fields": "status_code", "access_token": access_token}, timeout=30)
-        data = resp.json()
-        status = data.get("status_code")
-        log.info("コンテナステータス: %s", status)
-        if status == "FINISHED":
-            return True
-        if status in ("ERROR", "EXPIRED"):
-            log.error("コンテナ処理に失敗しました: %s", data)
-            sys.exit(1)
-        time.sleep(interval_sec)
-        elapsed += interval_sec
-    log.error("タイムアウトしました。ステータス確認を続けてください: %s", container_id)
-    sys.exit(1)
-
-
-def publish(access_token, ig_user_id, creation_id, max_retries=5, retry_interval_sec=5):
-    """公開する。作成直後は「Media ID is not available」(code 9007)になることがあるため、
-    その場合は少し待ってリトライする（画像でも数秒の処理時間が必要な場合がある）。"""
-    url = f"{HOST}/{API_VERSION}/{ig_user_id}/media_publish"
-    for attempt in range(1, max_retries + 1):
-        resp = requests.post(url, data={"access_token": access_token, "creation_id": creation_id}, timeout=60)
-        data = resp.json()
-        if resp.status_code == 200:
-            log.info("投稿成功: media id = %s", data["id"])
-            return data["id"]
-
-        error_code = data.get("error", {}).get("code")
-        if error_code == 9007 and attempt < max_retries:
-            log.info("メディアがまだ準備できていません。%s秒待って再試行します（%s/%s）", retry_interval_sec, attempt, max_retries)
-            time.sleep(retry_interval_sec)
-            continue
-
-        log.error("公開に失敗しました: %s", data)
-        sys.exit(1)
+def save_state(state):
+    with open(STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(state, f, ensure_ascii=False, indent=2)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Instagramへ自動投稿する")
-    parser.add_argument("--caption", help="キャプション本文")
-    parser.add_argument("--caption-file", help="キャプションが書かれたテキストファイルのパス")
-    parser.add_argument("--image-url", nargs="*", default=[], help="公開画像URL（複数指定でカルーセル）")
-    parser.add_argument("--video-url", help="公開動画URL")
-    parser.add_argument("--reels", action="store_true", help="動画をリールとして投稿する")
-    args = parser.parse_args()
+    if not os.path.isdir(PHOTOS_DIR):
+        print(f"{PHOTOS_DIR}/ フォルダが見つかりません。", file=sys.stderr)
+        sys.exit(1)
 
-    caption = args.caption
-    if args.caption_file:
-        with open(args.caption_file, "r", encoding="utf-8") as f:
-            caption = f.read().strip()
+    photos = sorted(
+        f for f in os.listdir(PHOTOS_DIR)
+        if f.lower().endswith((".jpg", ".jpeg", ".png"))
+    )
+    if not photos:
+        print(f"{PHOTOS_DIR}/ に画像がありません。写真を追加してください。", file=sys.stderr)
+        sys.exit(1)
 
-    access_token, ig_user_id = load_credentials()
+    state = load_state()
+    index = (state.get("last_index", -1) + 1) % len(photos)
+    photo_path = os.path.join(PHOTOS_DIR, photos[index])
+    print(f"選択された写真: {photo_path} ({index + 1}/{len(photos)})")
 
-    if args.video_url:
-        media_type = "REELS" if args.reels else "VIDEO"
-        container_id = create_container(
-            access_token, ig_user_id, caption=caption, video_url=args.video_url, media_type=media_type
-        )
-        wait_until_ready(access_token, container_id)
-        publish(access_token, ig_user_id, container_id)
+    imgbb_api_key = os.environ.get("IMGBB_API_KEY")
+    if not imgbb_api_key:
+        print("環境変数 IMGBB_API_KEY が設定されていません", file=sys.stderr)
+        sys.exit(1)
 
-    elif len(args.image_url) == 1:
-        container_id = create_container(access_token, ig_user_id, caption=caption, image_url=args.image_url[0])
-        publish(access_token, ig_user_id, container_id)
+    with tempfile.TemporaryDirectory() as tmp:
+        fixed_path = os.path.join(tmp, "fixed.jpg")
+        fix_aspect_ratio(photo_path, fixed_path)
+        image_url = upload_to_imgbb(fixed_path, imgbb_api_key)
+        print(f"公開URL: {image_url}")
 
-    elif len(args.image_url) > 1:
-        child_ids = []
-        for url in args.image_url:
-            cid = create_container(access_token, ig_user_id, image_url=url, is_carousel_item=True)
-            child_ids.append(cid)
-        carousel_id = create_carousel_container(access_token, ig_user_id, caption, child_ids)
-        publish(access_token, ig_user_id, carousel_id)
+    caption_result = subprocess.run(
+        ["python3", "generate_ig_caption.py"],
+        capture_output=True, text=True, check=True,
+    )
+    caption = caption_result.stdout.strip()
+    print("--- 生成されたキャプション ---")
+    print(caption)
+
+    caption_file = "ig_caption.txt"
+    with open(caption_file, "w", encoding="utf-8") as f:
+        f.write(caption)
+
+    subprocess.run(
+        [
+            "python3", "post_to_instagram.py",
+            "--caption-file", caption_file,
+            "--image-url", image_url,
+        ],
+        check=True,
+    )
+
+    state["last_index"] = index
+    save_state(state)
+    print("状態を更新しました:", state)
+
+
+if __name__ == "__main__":
+    main()
 
     else:
         parser.error("--image-url か --video-url のどちらかを指定してください")
