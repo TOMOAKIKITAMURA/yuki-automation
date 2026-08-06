@@ -1,0 +1,7 @@
+venv/
+__pycache__/
+*.pyc
+.env
+tweet.txt
+candidates.json
+replies.json
