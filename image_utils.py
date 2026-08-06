@@ -3,12 +3,13 @@ image_utils.py
 Instagram投稿用の画像処理ユーティリティ。
 
 - fix_aspect_ratio: Instagramが許容する縦横比(4:5〜1.91:1)に収まるよう、中央を基準に自動でクロップする
-- upload_to_catbox: catbox.moeに画像をアップロードし、Instagram投稿に必要な「公開URL」を取得する
-  （Instagram Graph APIはローカルファイルを直接受け付けず、公開URLの取得が必須のため）
+- upload_to_imgbb: imgbb.comに画像をアップロードし、Instagram投稿に必要な「公開URL」を取得する
+  （Instagram Graph APIはローカルファイルを直接受け付けず、公開URLの取得が必須のため。
+  catbox.moeはGitHub Actionsのようなデータセンターからのアップロードをブロックするため、
+  APIキー方式のimgbb.comに変更した）
 """
 
-import subprocess
-
+import requests
 from PIL import Image
 
 MIN_RATIO = 0.8    # 4:5（縦長の最大）
@@ -35,17 +36,15 @@ def fix_aspect_ratio(input_path, output_path):
     return output_path
 
 
-def upload_to_catbox(file_path):
-    result = subprocess.run(
-        [
-            "curl", "-s",
-            "-F", "reqtype=fileupload",
-            "-F", f"fileToUpload=@{file_path}",
-            "https://catbox.moe/user/api.php",
-        ],
-        capture_output=True, text=True, timeout=60,
-    )
-    url = result.stdout.strip()
-    if not url.startswith("http"):
-        raise RuntimeError(f"catbox.moeへのアップロードに失敗しました: {url}")
-    return url
+def upload_to_imgbb(file_path, api_key):
+    with open(file_path, "rb") as f:
+        resp = requests.post(
+            "https://api.imgbb.com/1/upload",
+            params={"key": api_key},
+            files={"image": f},
+            timeout=60,
+        )
+    data = resp.json()
+    if not data.get("success"):
+        raise RuntimeError(f"imgbbへのアップロードに失敗しました: {data}")
+    return data["data"]["url"]
