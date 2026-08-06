@@ -95,10 +95,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-    else:
-        parser.error("--image-url か --video-url のどちらかを指定してください")
-
-
-if __name__ == "__main__":
-    main()
