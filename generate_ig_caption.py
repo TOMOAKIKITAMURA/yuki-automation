@@ -29,7 +29,7 @@ def main():
         f"上記の設定に沿って、Instagramのキャプションを1件だけ生成してください。"
     )
 
-    client = anthropic.Anthropic(api_key=api_key)
+    client = anthropic.Anthropic(api_key=api_key, timeout=60.0)
     message = client.messages.create(
         model="claude-sonnet-5",
         max_tokens=500,
