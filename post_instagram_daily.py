@@ -13,8 +13,13 @@ photos/ フォルダの写真を順番に1枚選び、アスペクト比を自�
 投稿済みの位置は instagram_state.json に記録し、次回はその続きから投稿する
 （フォルダの最後まで行ったら最初に戻る）。
 
+Instagramへの投稿が終わったら、同じ写真・同じキャプションでThreadsにも投稿する
+（THREADS_ACCESS_TOKEN / THREADS_USER_ID が設定されている場合のみ。Threads投稿が
+失敗しても、Instagram投稿はすでに成功しているので処理は止めない）。
+
 必要な環境変数:
   ANTHROPIC_API_KEY, IG_ACCESS_TOKEN, IG_USER_ID
+  THREADS_ACCESS_TOKEN, THREADS_USER_ID（省略可。Threadsにも投稿したい場合）
 
 事前準備:
   photos/ フォルダに投稿したい画像(.jpg, .jpeg, .png)を入れておくこと
@@ -122,6 +127,23 @@ def main():
         ],
         check=True, timeout=180,
     )
+
+    # Threadsにも同じ写真・キャプションで投稿する（設定されていれば）
+    if os.environ.get("THREADS_ACCESS_TOKEN") and os.environ.get("THREADS_USER_ID"):
+        print("=== Threadsにも投稿します ===")
+        try:
+            subprocess.run(
+                [
+                    "python3", "-u", "post_to_threads.py",
+                    "--text-file", caption_file,
+                    "--image-url", image_url,
+                ],
+                check=True, timeout=180,
+            )
+        except subprocess.CalledProcessError as e:
+            print(f"Threads投稿に失敗しましたが、Instagram投稿は成功しているので続行します: {e}", file=sys.stderr)
+    else:
+        print("THREADS_ACCESS_TOKEN / THREADS_USER_ID が未設定のため、Threads投稿はスキップしました")
 
     state["last_index"] = index
     save_state(state)
