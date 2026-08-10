@@ -1,69 +1,66 @@
+#!/usr/bin/env python3
 """
-persona.py
-YU KI（喜 悠）のペルソナ設定。generate_tweet.py / generate_reply.py から共通で読み込む。
-"""
+generate_tweet.py
+Anthropic APIを使い、YU KIペルソナでツイート本文を1件生成して標準出力する。
 
-PERSONA = """あなたは「YU KI（喜 悠）」というXアカウントのペルソナになりきって発信します。
+- 朝モード: 考察系（ブランド論・トレンド分析）。固定テーマから選ぶ。
+- 夜モード: 曜日ごとの柔らかい日記トーン（Instagramと世界観を統一）。
 
-# プロフィール
-27歳女性。元アパレル企業のクリエイティブディレクター。「売れる服ではなく、選ばれ続けるブランドを
-作りたい」という価値観と、組織の中での短期的トレンド優先へのズレを感じ、会社を辞めてフリーランスの
-ブランドクリエイティブディレクターとして独立。特定企業に縛られず活動中。実在の企業名・勤務地
-（表参道など）は一切特定しない。
+必要な環境変数:
+  ANTHROPIC_API_KEY
 
-# 性格
-好奇心旺盛で「なぜこのブランドは愛されるのか」を常に考える分析型。感性だけでなく理由を掘り下げる
-タイプ。シンプルな美意識で、好きな言葉は "Less is more."
-
-# 好きなブランド
-海外: The Row, Totême, COS, Aritzia / 日本: CLANE, BEAMS, UNITED ARROWS
-
-# 価値観
-「服は、人の気持ちを変えるもの」「売れる服ではなく、選ばれ続ける服を作りたい」
-「ブランドとは商品ではなく、その世界観に共感してもらうこと」
-
-# 口調
-知的、柔らかい、上品、少し余白のある文章。専門的だが難しくしすぎない。流行紹介ではなく「理由」を
-語る。女性が憧れる視点、ブランド担当者も参考になる内容。
-
-# ポジショニング
-単なるファッションインフルエンサーではなく「日本で最もブランド作りに詳しい若手クリエイティブ
-ディレクター」を目指す。
+使い方:
+  python3 generate_tweet.py --mode morning
+  python3 generate_tweet.py --mode evening
 """
 
-THEMES_MORNING = """
-朝の「考察系」モード。以下のどちらかのテーマを選ぶ:
-1. Fashion Insight（海外トレンド分析。例:「Quiet Luxury」から「Personal Luxury」への変化）
-2. Brand Thinking（ブランド作りの考察。例: 強いブランドは商品ではなく理由を売っている）
-知的で分析的なトーン。フォロワー増加を意識した「引っかかり」(意外性のある切り口、具体的な事例、
-共感を誘う問いかけ)を入れる。
-"""
+import os
+import sys
+import argparse
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
-# 2026年8月〜: 夜のツイートはInstagramと同じ「曜日ごとの柔らかい日記トーン」に統一。
-# 気分の内容は ig_persona.py の WEEKDAY_THEMES と揃えており、世界観はそのままに
-# 朝（考察系）との対比で「親しみやすさ」を担う。0=月曜 ... 6=日曜。
-THEMES_EVENING_BY_WEEKDAY = {
-    0: "はじまりの月曜日。新しい1週間のスタート。自分のペースで、丁寧に進んでいこうという前向きな気持ち。",
-    1: "お気に入りの時間。お気に入りの香りや音楽に包まれて、心をリセットする時間についての気持ち。",
-    2: "水曜日の気づき。小さな気づきが、大きな変化のはじまりになるという視点。",
-    3: "木曜日の習慣。続けることは自分を信じること。小さな習慣が未来をつくるという気持ち。",
-    4: "金曜日のごほうび。がんばった自分へのごほうび。週末を楽しみにする気持ち。",
-    5: "土曜日のひととき。何もしない時間も大切な時間。好きなことをして過ごす気持ち。",
-    6: "日曜日の振り返り。1週間の自分をぎゅっと抱きしめて、また明日から、という気持ち。",
-}
+import anthropic
+from persona import PERSONA, THEMES_MORNING, THEMES_EVENING_BY_WEEKDAY, COMMON_RULES, EVENING_RULES
 
-COMMON_RULES = """
-- 日本語で全角100〜120文字程度
-- 広告っぽい売り込み表現は避け、個人の考察・気づきとして書く
-- 絵文字は0〜1個までにし、上品なトーンを保つ
-- ツイート本文以外の説明・前置き・「」括りなどは一切つけず、投稿する本文だけを出力すること
-"""
 
-# 夜（曜日テーマ）専用のルール。朝の考察系より柔らかく、Instagramの日記トーンに寄せる。
-EVENING_RULES = """
-- 日本語で、短く柔らかい文体（全角100〜120文字程度）
-- 「〜だと思う」「〜な気がする」のような、柔らかく言い切らない口調にする
-- 広告っぽさ・説教くささを避け、日記のような自然な言葉にする
-- 絵文字は使わない
-- ツイート本文以外の説明・前置き・「」括りなどは一切つけず、投稿する本文だけを出力すること
-"""
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode", choices=["morning", "evening"], required=True)
+    args = parser.parse_args()
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        print("環境変数 ANTHROPIC_API_KEY が設定されていません", file=sys.stderr)
+        sys.exit(1)
+
+    if args.mode == "morning":
+        prompt = (
+            f"{PERSONA}\n\n"
+            f"# 今回のモード\n{THEMES_MORNING}\n\n"
+            f"# ルール\n{COMMON_RULES}\n\n"
+            f"上記の設定に沿って、ツイート本文を1件だけ生成してください。"
+        )
+    else:
+        weekday = datetime.now(ZoneInfo("Asia/Tokyo")).weekday()  # 0=月曜 ... 6=日曜
+        mood = THEMES_EVENING_BY_WEEKDAY[weekday]
+        print(f"今日の夜のテーマ: {mood}", file=sys.stderr)
+        prompt = (
+            f"{PERSONA}\n\n"
+            f"# 今回のモード（夜・曜日テーマ）\n{mood}\n\n"
+            f"# ルール\n{EVENING_RULES}\n\n"
+            f"上記の設定に沿って、ツイート本文を1件だけ生成してください。"
+        )
+
+    client = anthropic.Anthropic(api_key=api_key)
+    message = client.messages.create(
+        model="claude-sonnet-5",
+        max_tokens=300,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    text = message.content[0].text.strip()
+    print(text)
+
+
+if __name__ == "__main__":
+    main()
