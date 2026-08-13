@@ -1,0 +1,37 @@
+name: Render YUKI Reel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r yuki_reel_automation/requirements.txt
+
+      - name: Render Reel
+        run: |
+          cd yuki_reel_automation
+          python render_reel.py
+
+      - name: Upload finished Reel
+        uses: actions/upload-artifact@v4
+        with:
+          name: yuki-reel
+          path: yuki_reel_automation/output/
