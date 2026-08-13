@@ -1,0 +1,66 @@
+{
+  "output": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "text_style": {
+    "font_size": 58,
+    "color": [
+      246,
+      242,
+      234,
+      255
+    ],
+    "margin_x": 78,
+    "margin_bottom": 250,
+    "line_gap": 18,
+    "shadow": true
+  },
+  "clips": [
+    {
+      "image": "assets/01.jpg",
+      "duration": 2.2,
+      "motion": "push_in",
+      "text": "なぜThe Rowには、\n大きなロゴがない？"
+    },
+    {
+      "image": "assets/02.jpg",
+      "duration": 1.8,
+      "motion": "pan_right",
+      "text": "ロゴがなくても、\nなぜ「らしさ」が伝わる？"
+    },
+    {
+      "image": "assets/03.jpg",
+      "duration": 1.6,
+      "motion": "push_in",
+      "text": "シルエット。\n素材。\n色。"
+    },
+    {
+      "image": "assets/04.jpg",
+      "duration": 2.1,
+      "motion": "hold",
+      "text": "世界観は、\n商品だけでつくられない。"
+    },
+    {
+      "image": "assets/05.jpg",
+      "duration": 1.5,
+      "motion": "pan_left",
+      "text": "強いブランドほど、"
+    },
+    {
+      "image": "assets/06.jpg",
+      "duration": 2.2,
+      "motion": "pull_out",
+      "text": "ロゴ以外で記憶される。"
+    },
+    {
+      "image": "assets/07.jpg",
+      "duration": 2.8,
+      "motion": "hold",
+      "text": "Less is more.\nYU KI / WHY BRAND"
+    }
+  ],
+  "grain": 4,
+  "vignette": 0.12
+}
