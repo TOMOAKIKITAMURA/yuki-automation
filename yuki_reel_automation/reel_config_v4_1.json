@@ -1,0 +1,99 @@
+{
+  "output": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "text_style": {
+    "font_size": 64,
+    "color": [
+      246,
+      242,
+      234,
+      255
+    ],
+    "shadow_color": [
+      0,
+      0,
+      0,
+      120
+    ],
+    "margin_x": 82,
+    "margin_y": 300,
+    "line_gap": 18
+  },
+  "grain": 3,
+  "vignette": 0.08,
+  "audio": {
+    "enabled": false,
+    "file": "assets/music/yuki_default_01.mp3",
+    "volume": 0.16,
+    "fade_in": 0.5,
+    "fade_out": 1.2
+  },
+  "clips": [
+    {
+      "image": "assets/01.jpg",
+      "duration": 2.6,
+      "motion": "push_in",
+      "text": "WHY BRAND / TOTÊME\nなぜTotêmeは、\n地味なのに選ばれる？",
+      "text_position": "lower_left",
+      "text_start": 0.20,
+      "text_end": 2.35
+    },
+    {
+      "image": "assets/02.jpg",
+      "duration": 1.6,
+      "motion": "hold",
+      "text": "少ない色。\n良い生地。",
+      "text_position": "lower_left",
+      "text_start": 0.20,
+      "text_end": 1.35
+    },
+    {
+      "image": "assets/03.jpg",
+      "duration": 1.9,
+      "motion": "pan_right",
+      "text": "",
+      "text_position": "lower_left",
+      "text_start": 0.00,
+      "text_end": 0.00
+    },
+    {
+      "image": "assets/04.jpg",
+      "duration": 2.3,
+      "motion": "pan_left",
+      "text": "同じ形を、\n何度も選ぶ。",
+      "text_position": "lower_left",
+      "text_start": 0.25,
+      "text_end": 2.05
+    },
+    {
+      "image": "assets/05.jpg",
+      "duration": 1.4,
+      "motion": "hold",
+      "text": "",
+      "text_position": "lower_left",
+      "text_start": 0.00,
+      "text_end": 0.00
+    },
+    {
+      "image": "assets/06.jpg",
+      "duration": 2.7,
+      "motion": "pull_out",
+      "text": "強いブランドは、\n引き算でできている。",
+      "text_position": "lower_left",
+      "text_start": 0.30,
+      "text_end": 2.45
+    },
+    {
+      "image": "assets/07.jpg",
+      "duration": 2.2,
+      "motion": "pull_out",
+      "text": "Less is more.\nYUKI / WHY BRAND",
+      "text_position": "lower_left",
+      "text_start": 0.30,
+      "text_end": 2.05
+    }
+  ]
+}
