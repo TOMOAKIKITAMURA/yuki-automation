@@ -1,0 +1,40 @@
+name: Render YUKI Reel V4.1
+
+on:
+  workflow_dispatch:
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install FFmpeg and Japanese fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-cjk
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r yuki_reel_automation/requirements.txt
+
+      - name: Render Reel V4.1
+        run: |
+          cd yuki_reel_automation
+          mkdir -p output
+          python render_reel_v4_1.py \
+            --config reel_config_v4_1.json \
+            --output output/yuki_reel_v4_1.mp4
+
+      - name: Upload finished Reel V4.1
+        uses: actions/upload-artifact@v4
+        with:
+          name: yuki-reel-v4-1
+          path: yuki_reel_automation/output/yuki_reel_v4_1.mp4
