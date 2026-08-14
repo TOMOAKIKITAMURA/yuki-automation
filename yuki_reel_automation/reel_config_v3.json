@@ -1,0 +1,92 @@
+{
+  "output": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30
+  },
+  "text_style": {
+    "font_size": 54,
+    "color": [
+      246,
+      242,
+      234,
+      255
+    ],
+    "shadow_color": [
+      0,
+      0,
+      0,
+      90
+    ],
+    "margin_x": 78,
+    "margin_y": 170,
+    "line_gap": 14
+  },
+  "grain": 3,
+  "vignette": 0.08,
+  "clips": [
+    {
+      "image": "assets/01.jpg",
+      "duration": 2.3,
+      "motion": "push_in",
+      "text": "なぜ、似ているのに\nまた欲しくなる？",
+      "text_position": "lower_left",
+      "text_start": 0.2,
+      "text_end": 2.0
+    },
+    {
+      "image": "assets/02.jpg",
+      "duration": 1.6,
+      "motion": "hold",
+      "text": "",
+      "text_position": "center",
+      "text_start": 0.0,
+      "text_end": 0.0
+    },
+    {
+      "image": "assets/03.jpg",
+      "duration": 1.9,
+      "motion": "pan_right",
+      "text": "同じ形を、\n何度も選び直すこと。",
+      "text_position": "upper_right",
+      "text_start": 0.3,
+      "text_end": 1.6
+    },
+    {
+      "image": "assets/04.jpg",
+      "duration": 2.5,
+      "motion": "push_in",
+      "text": "変化ではなく、\n精度を上げていく。",
+      "text_position": "center_left",
+      "text_start": 0.2,
+      "text_end": 1.8
+    },
+    {
+      "image": "assets/05.jpg",
+      "duration": 1.5,
+      "motion": "hold",
+      "text": "",
+      "text_position": "center",
+      "text_start": 0.0,
+      "text_end": 0.0
+    },
+    {
+      "image": "assets/06.jpg",
+      "duration": 2.2,
+      "motion": "pan_left",
+      "text": "強いブランドは、\n少しだけ更新する。",
+      "text_position": "lower_right",
+      "text_start": 0.3,
+      "text_end": 2.0
+    },
+    {
+      "image": "assets/07.jpg",
+      "duration": 2.6,
+      "motion": "pull_out",
+      "text": "新しさより、\n選び続ける強さ。",
+      "text_position": "center",
+      "text_start": 0.3,
+      "text_end": 2.2
+    }
+  ]
+}
