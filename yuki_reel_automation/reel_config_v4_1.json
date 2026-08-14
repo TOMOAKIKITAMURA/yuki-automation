@@ -25,8 +25,8 @@
   "grain": 3,
   "vignette": 0.08,
   "audio": {
-    "enabled": false,
-    "file": "assets/music/yuki_default_01.mp3",
+    "enabled": true,
+    "file": "assets/music/penguinmusic-fashion-minimal-145062.mp3",
     "volume": 0.16,
     "fade_in": 0.5,
     "fade_out": 1.2
