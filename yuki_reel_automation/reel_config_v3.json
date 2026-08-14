@@ -83,10 +83,10 @@
       "image": "assets/07.jpg",
       "duration": 2.2,
       "motion": "pull_out",
-      "text": "Less is more.",
+      "text": "",
       "text_position": "lower_right",
-      "text_start": 0.40,
-      "text_end": 1.90
+      "text_start": 0.00,
+      "text_end": 0.00
     }
   ]
 }
